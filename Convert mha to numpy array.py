@@ -5,13 +5,6 @@ Created on Thu Oct 14 12:47:40 2021
 @author: Rory Harris
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 12 11:52:38 2021
-
-@author: jwluc
-"""
-
 import os
 from tqdm import tqdm
 import numpy as np
@@ -19,49 +12,113 @@ import SimpleITK as sitk
 
 data_filepaths = []
 save_filepaths = []
+filepath_old_baseline = "\Data_old\Baseline scans"
+filepath_old_week12 = "\Data_old\Week 12 scans"
+filepath_baseline = "\Data\Baseline scans"
+filepath_week12 = "\Data\Week 12 scans"
+name = [['FA14Saggital_TissueMap.mha','auto'],
+        ['FA14Saggital_TissueMap_Corrected.mha','corrected']]
+scans=[1,3,6,7,10,12,13,19]
+data_possibilities = [0,1]
 cwd = os.getcwd()
-print(cwd)
+
+def merge_classes(data):
+    # receives a 32x113(or z)x512x512 array
+    for i in tqdm(range(0,len(data))):
+        for j in range(0,len(data[i])):
+            for k in range(0, len(data[i][j])):
+                for l in range(0,len(data[i][j][k])):
+                    if data[i][j][k][l] == np.array(2).astype(np.float16):
+                        data[i][j][k][l] = np.array(1).astype(np.float16)   
+    return data
+
+def resize_to_1D(data):
+    temp = []
+    for i in range(0,len(data)):
+        for j in range(0,len(data[i])):
+            temp.append(data[i][j])
+    return temp
+
+def delete_null(automatic, corrected):
+    #Find scans which have all class 0 in the automatic and corrected scans
+    #Remove these from the automatic, corrected, and feature data arrays
+    automatic_reduced = [] # np.array([], dtype = object)
+    corrected_reduced = [] # np.array([], dtype = object)
+
+    for i in range(0, len(automatic)):
+        #temp_a = []
+        #temp_c = []
+        temp_auto = resize_to_1D(automatic[i])
+        temp_corr = resize_to_1D(corrected[i])
+        if (sum(temp_auto) + sum(temp_corr) != 0): 
+            automatic_reduced.append(automatic[i])
+            corrected_reduced.append(corrected[i])
+
+    #automatic_reduced.append(temp_a)
+    #corrected_reduced.append(temp_c)
+    print(len(automatic_reduced), len(corrected_reduced))
+           
+    return automatic_reduced, corrected_reduced
 
 ###---
     #Current working directory (cwd) should be the directory in which the first MRI folder is located
 ###---
 
-filepath_baseline = "\Data\Baseline scans"
-filepath_week12 = "\Data\Week 12 scans"
+#Ask whether to merge classes 1 and 2
+ans_merge = input("Merge classes 1 and 2? (y/n) -> ")
+merged = ""
+if ans_merge == 'y':
+    merged = "_merged"
+    
+ans_reduced = input("Remove data which is all background? (y/n) -> ")
+reduced = ""
+if ans_reduced == 'y':
+    reduced = "_reduced"
 
-name = 'FA14Saggital_TissueMap.mha'
-#name = 'FA14Saggital_TissueMap_Corrected.mha'
-scans=[1,3,6,7,10,12,13,19]
+for i in range(0,len(name)):
+    for scan in scans:
+        data_filepaths.append(cwd+filepath_old_baseline+'\\scan'+str(scan)+'\\'+name[i][0])
+        data_filepaths.append(cwd+filepath_old_week12+'\\scan'+str(scan)+'\\'+name[i][0])    
+        save_filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+name[i][1]+merged+reduced+'\\')
+        save_filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+name[i][1]+merged+reduced+'\\')    
+    #data_filepaths is a list off all .mha files to access
+    #save_filepaths is a list of folders to save the numpy array files to
+#print(data_filepaths)
+#print(save_filepaths)
 
-for scan in scans:
-    data_filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+name)
-    data_filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+name)    
-    save_filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+name[:-4]+'_numpy\\'+name[:-4])
-    save_filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+name[:-4]+'_numpy\\'+name[:-4])    
-#data_filepaths is a list off all .mha files to access
-#save_filepaths is a list of folders to save the numpy array files to
-
-#check folders exist
+# Check folders exist and create them if not
 for path in save_filepaths:
-    if not os.path.exists(path[:-(len(name[:-4])+1)]):
-        os.makedirs(path[:-(len(name[:-4])+1)])
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-   
-for a in tqdm(range(0,1)):#len(data_filepaths))):
-    sitkImage= sitk.ReadImage(data_filepaths[a])
+# Convert into numpy array and create data array with all of them in
+data = []   
+for i in tqdm(range(0,len(data_filepaths))):
+    sitkImage= sitk.ReadImage(data_filepaths[i])
     np_im = sitk.GetArrayFromImage(sitkImage)
-    print(len(np_im),len(np_im[0]),len(np_im[0][0]))
-    for k in range(0,5):
-        arr = np_im[k]
-        #Use below to print the numpy array of one of the 113 slices
-        print(sum(arr))
-        '''
-        #for i in range(0,len(np_im[0])):
-            #for j in range(0,len(np_im[0][0])):
-                #arr.append([i,j,k,np_im[k][j][i]])
-        for i in range(len(arr)):
-            for j in range(len(arr[0])):
-                if k==0:
-                    print(arr[i][j])
-        #np.save(save_filepaths[a]+'_plane'+str(k),arr)
-        '''
+    data.append(np_im)
+
+if ans_reduced == 'y':
+    auto = data[:16]
+    corr = data[16:]
+    data = []
+    temp_auto = []
+    temp_corr = []
+    for i in tqdm(range(0,len(auto))):
+        auto_red, corr_red = delete_null(auto[i], corr[i])
+
+        temp_auto.append(auto_red)
+        temp_corr.append(corr_red)
+    data = temp_auto
+    for i in range(0, len(temp_corr)):
+        data.append(temp_corr[i])
+    #data.append(temp_corr)
+    print(len(data))
+    
+        
+if ans_merge == 'y':     
+    data = merge_classes(data)
+
+for i in tqdm(range(0,len(save_filepaths))): 
+    print(len(save_filepaths))
+    np.save(save_filepaths[i] + 'init.npy', data[i],allow_pickle = True)
