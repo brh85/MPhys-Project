@@ -11,3 +11,6 @@ Updated the code which converts the files to numpy arrays so that they are more 
 
 25-2-22
 The code to extract feature vectors is updated to handle the new format of the numpy array data and now saves them in the data folder with them.
+
+8-3-22
+Uploaded the code which can now augment the data. Initially this is just rotation (90, 180, 270) and flipping (horizontal and vertical), but there is room for more to be added
