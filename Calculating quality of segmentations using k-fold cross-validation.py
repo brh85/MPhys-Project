@@ -111,7 +111,7 @@ def bootstrapping(test_set,test_set_dice_scores,test_set_dice_scores_numerical_v
     
     #plotting
     plt.hist(bootstrapping_data,bins=25)
-    plt.ylabel('number of scores')
+    plt.ylabel('Number of scores')
     plt.xlabel(metric)
     plt.savefig(folder_temp + '\\k=' + str(k) + ' - ' + metric + ' - iterations=' + str(iterations))
     plt.show()
@@ -147,57 +147,68 @@ def F_beta(predicted_data,actual_data,beta,data_possibilities):
 
 def dice_from_jaccard_index(A,B):
     if merged == 0:
-        JI = sklearn.metrics.jaccard_score(A,B, average = 'weighted')
+        JI = sklearn.metrics.jaccard_score(A,B, average = 'macro')
     else:
         JI = sklearn.metrics.jaccard_score(A,B,average = 'binary')
     return 2*JI/(1+JI)
 
-def get_Dice_Score(val,training_data,im_data,cor_im_data,dice_score_save_loc,data_possibilities):
+def get_Dice_Score(val,training_data,im_data,cor_im_data,dice_score_save_loc,data_possibilities,ans_augmented):
     Dice_Scores = []
     dice_score_values = []
     dice_plot = []
-    for i in tqdm(range(0,len(training_data))):
-        temp = []
-        temp_2 = []
-        for j in range(0,len(training_data[i])):
-            #d_s = Dice_Score(im_data[i][j], cor_im_data[i][j], data_possibilities)
-            d_s = dice_from_jaccard_index(resize_for_svm(im_data[i][j]), resize_for_svm(cor_im_data[i][j]))
-            dice_plot.append(d_s)
-            temp_2.append(d_s)
-            if d_s > val:
-                temp.append(data_possibilities[1])
-            if d_s <= val:
-                temp.append(data_possibilities[0])
-        Dice_Scores.append(temp)
-        dice_score_values.append(temp_2)
-    np.save(cwd + dice_score_save_loc + "\\Dice_Scores",Dice_Scores)
-    np.save(cwd + dice_score_save_loc + "\\Dice_Score_Values",dice_score_values)
-    np.save(cwd + dice_score_save_loc + "\\Dice_Plot",dice_plot)
+    augmented = ''
+    if ans_augmented == 'y':
+        augmented = "_augmented"
+    for i in tqdm(range(0,len(training_data))): #16 iterations
+        temp_a = []
+        temp_b = []
+        for j in range(0,len(training_data[i])): #6 iterations
+            temp = []
+            temp_2 = []
+            for k in range(0,len(training_data[i][j])): #113 iterations
+                #d_s = Dice_Score(im_data[i][j], cor_im_data[i][j], data_possibilities)
+                d_s = dice_from_jaccard_index(resize_2d_array(im_data[i][j][k]), resize_2d_array(cor_im_data[i][j][k]))
+                dice_plot.append(d_s)
+                temp_2.append(d_s)
+                if d_s > val:
+                    temp.append(data_possibilities[1])
+                if d_s <= val:
+                    temp.append(data_possibilities[0])
+            temp_a.append(temp)
+            temp_b.append(temp_2)
+        Dice_Scores.append(temp_a)
+        dice_score_values.append(temp_b)
+    #print(len(Dice_Scores),len(Dice_Scores[0]),len(Dice_Scores[0][0]))
+    #print(len(dice_score_values),len(dice_score_values[0]),len(dice_score_values[0][0]))
+    # Creates a 16x6xz array with the dice scores atm
+    np.save(cwd + dice_score_save_loc + augmented + "\\Dice_Scores",Dice_Scores)
+    np.save(cwd + dice_score_save_loc + augmented + "\\Dice_Score_Values",dice_score_values)
+    np.save(cwd + dice_score_save_loc + augmented + "\\Dice_Plot",dice_plot)
     return Dice_Scores, dice_score_values, dice_plot
 
 ###---------GET LOCATION OF DATA--------------###
-def get_image_data(Type):
-    temp = os.listdir(cwd+numpy_array_save_location+Type)
-    data = []
-    temp = correct_ordering(temp)
-    for z in temp:
-        data.append(np.load(cwd+numpy_array_save_location+Type+'\\'+z))
-    return data
-
-def correct_ordering(directory_list):
-    b_or_w = ['baseline_','week12_']
-    temp = []
+def get_image_data(Type, filename, ans_augmented):
+    filepath_baseline = "\Data\Baseline scans"
+    filepath_week12 = "\Data\Week 12 scans"
+    filepaths = []
     for scan in scans_to_look_at:    
-        for el in directory_list:
-            if el[:len(b_or_w[0])] == b_or_w[0]:
-                num = int(el[len(b_or_w[0]):-4])
-                if scan == num:
-                    temp.append(el)
-            if el[:len(b_or_w[1])] == b_or_w[1]:
-                num = int(el[len(b_or_w[1]):-4])
-                if scan == num:
-                    temp.append(el)
-    return temp
+        filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+filename+Type+'\\')
+        filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+filename+Type+'\\')    
+    data = []
+    for i in tqdm(range(0, len(filepaths))): # should be 16 iterations
+        if ans_augmented == 'y':
+            temp = os.listdir(filepaths[i])
+            temp_data = []
+            for j in temp: # should be 6 iterations
+                temp_data.append(np.load(filepaths[i]+'\\'+j).astype(np.float16))
+            data.append(temp_data)
+        else:
+            temp_data = []
+            temp_data.append(np.load(filepaths[i]+'\\init.npy').astype(np.float16))
+            data.append(temp_data)
+    #print(len(data),len(data[0]),len(data[0][0]),len(data[0][0][0]))
+    # Data should now be a 16x6xzx512x512 array
+    return data
 
 def decompose(x,data):
     pca = decomposition.PCA(n_components=x).fit_transform(data)
@@ -237,19 +248,32 @@ def split_data(data,k,n):
             Train.append(data[i])
     return Train,Validation,Test
 
-def resize_for_svm(data):
+def resize_2d_array(data):
     temp = []
     for i in range(0,len(data)):
         for j in range(0,len(data[i])):
             temp.append(data[i][j])
     return temp
 
-def load_saved_dice_scores(location):
-    list_of_files = os.listdir(cwd + location)
+def resize_for_svm(data):
+    # Originally input a 8xzx512 array (or 4xzx512)
+    # Now a 8x6xzx512 array with the augmented data so add an extra for loop
+    temp = []
+    for i in range(0,len(data)):
+        for j in range(0,len(data[i])):
+            for k in range (0, len(data[i][j])):
+                temp.append(data[i][j][k])
+    # Output a 1D array of length 8*6*z*512 (hopefully?)
+    return temp
+
+def load_saved_dice_scores(location,ans_augmented):
+    augmented = ''
+    if ans_augmented == 'y':
+        augmented = "_augmented"
+    list_of_files = os.listdir(cwd + location + augmented)
     temp = []
     for file in list_of_files:
-        temp.append(np.load(cwd + location + "\\"+ file,allow_pickle=True))
-        print(cwd + location + "\\"+ file)
+        temp.append(np.load(cwd + location + augmented + "\\"+ file,allow_pickle=True))
     return temp[1],temp[2],temp[0] #dice_scores, dice_score_values, dice_plot
 
 def write_results_to_file(Results,av,folder,hyperparameter,mean,confusion_matrices,metric_for_validation):
@@ -272,8 +296,9 @@ def write_results_to_file(Results,av,folder,hyperparameter,mean,confusion_matric
 
 def plot_dice_scores(scores_plot):
     plt.hist(scores_plot,bins=20)
-    plt.ylabel('number of scores')
-    plt.xlabel('dice score')
+    plt.ylabel('Number of scores')
+    plt.xlabel('Dice score')
+    plt.title('Distribution of Dice scores')
     plt.show()
     scores = np.array(scores_plot)
     return scores.mean(),np.median(scores)
@@ -324,26 +349,30 @@ def train_classifier(classifier_type,Train_new, Dice_new_Train, Validation_new, 
     return scores,c_vals,c_best,g_vals,g_best
     
 def main():
-    image_data = get_image_data('\\auto'+data_type)
-    Corrected_image_data = get_image_data('\\corrected'+data_type)
-    patient_data = get_image_data('\\feature_vectors'+data_type) #patient data has size (18,113,512)    
-
-    #16 scans - 2 x 8 patients at baseline and week 12, ordered: patient 1 baseline, patient 1 week 12, patient 2 baseline, patinet 2 week 12 etc.
-    #Then usual feature vector list, with 113 slices for each data set
+    ans_augmented = input("Use augmented data (y/n) -> ")   
+    
+    print("Retrieving data...")
+    image_data = get_image_data(data_type, 'auto',ans_augmented)
+    Corrected_image_data = get_image_data(data_type, 'corrected',ans_augmented)
+    patient_data = get_image_data(data_type, 'auto_feat',ans_augmented)    
     
     ans = input("Re-calculate dice scores (y/n) -> ")
-    #ans = 'n'
     if ans =="y":
-        dice_scores, dice_score_values, dice_plot = get_Dice_Score(val, patient_data, image_data, Corrected_image_data,dice_score_save_folder_location,data_possibilities)
+        dice_scores, dice_score_values, dice_plot = get_Dice_Score(val, patient_data, image_data, Corrected_image_data,dice_score_save_folder_location,data_possibilities, ans_augmented)
     else:
-        dice_scores, dice_score_values, dice_plot = load_saved_dice_scores(dice_score_save_folder_location)
-        
+        dice_scores, dice_score_values, dice_plot = load_saved_dice_scores(dice_score_save_folder_location,ans_augmented)
+    
+   # We now have arrays containing the auto, corrected, and dice score arrays
+   # These should now all have an extra dimension due to augmented images
+   # This will be 16x6xz (note 6 may vary if we augment images more)
+       # Apart from dice_plot which should 
+    
     mean,median = plot_dice_scores(dice_plot)
     print(mean,median)
     ###---------------------------------------------------------###
     
     for metric_for_validation in metrics_for_validation:    #loop over all chosen metrics to be maximised in validation
-        print('maximising',metric_for_validation,'in validation stage')
+        print('Maximising ',metric_for_validation,' in validation stage')
         folder_temp = folder + '\\' + metric_for_validation
         Results = []
         hyperparameters = []
@@ -353,9 +382,8 @@ def main():
         Scores = []
         C_Vals = []
         G_Vals = []
-        #K-FOLD VALIDATION LOOP 
-        #NOW 4-FOLD
         
+        #K-FOLD VALIDATION LOOP         
         for k in tqdm(range(0,k_max)):
             
             Train,Validation,Test = split_data(patient_data,k,n)
@@ -363,16 +391,21 @@ def main():
             Train_image_data_corr,Validation_image_data_corr,Test_image_data_corr = split_data(Corrected_image_data,k,n)
             Train_dice_Scores,Validation_dice_Scores,Test_dice_Scores = split_data(dice_scores,k,n)
             Train_dice_score_numerical_value,Validation_dice_score_numerical_value,Test_dice_score_numerical_value = split_data(dice_score_values,k,n)
-        
+            
+            # Splitting should be alright with the augmented data
+            # Training data should now be 8x6xzx512 array for example
+            
             ###----------RESIZE THE ARRAYS TO BE USED IN THE SVM (2D to 1D array)------------------###
+            
+            # Resizing needs to be altered for the augmented images
             
             Train_new = resize_for_svm(Train)
             Validation_new = resize_for_svm(Validation)
             Test_new = resize_for_svm(Test)
             
-            Train_new = decompose(new_dimensionality,Train_new)
-            Validation_new = decompose(new_dimensionality,Validation_new)
-            Test_new = decompose(new_dimensionality,Test_new)
+            #Train_new = decompose(new_dimensionality,Train_new)
+            #Validation_new = decompose(new_dimensionality,Validation_new)
+            #Test_new = decompose(new_dimensionality,Test_new)
             
             Dice_new_Train = resize_for_svm(Train_dice_Scores)
             Dice_new_Validation = resize_for_svm(Validation_dice_Scores)
@@ -444,7 +477,7 @@ def main():
     
 ###-------------------------DEFINE VARIABLES--------------------------------###
 classifier_types = ['linear']#['linear','poly']
-data_types = ['_reduced'] #['', '_merged', '_reduced' ,'merged_and_reduced']
+data_types = ['_reduced'] #['', '_merged', '_reduced' ,'_merged_reduced']
 for classifier_type in classifier_types:
     for data_type in data_types:
         merged = 0 #1 if classes 1 and 2 are merged, 0 if not
@@ -454,7 +487,7 @@ for classifier_type in classifier_types:
         date_and_time_now = now.strftime("%d/%m/%Y %H:%M:%S").replace(':', ';').replace('/','-')
         scans_to_look_at = [1,3,6,7,10,12,13,19]    #numbers of patient data to use
         cwd = os.getcwd()
-        val = 0.95 #0.9620364830557224 #threshold for dice score (between 0 and 1) median 0.99 #med: 0.95
+        val = 0.89 #0.9620364830557224 #threshold for dice score (between 0 and 1) median 0.99 #med: 0.95
         range_of_validation_iterations = [-1,10]
         n = 4
         k_max = 4
@@ -462,7 +495,6 @@ for classifier_type in classifier_types:
         iterations_of_bootstrapping = 10000 #(10000)
         data_possibilities = [0,1] #['bad','good']
         svm_iterations = 1000 #no. iterations when training svm
-        numpy_array_save_location = '\\input_numpy_arrays'
         dice_score_save_folder_location = "\\Results2\\Dice_Scores_macro" #"\\Results\\Dice_Scores_val_mean"
         metrics = ['Accuracy','Precision','Recall','F-beta','AUC']
         metrics_for_validation = ['AUC'] #metric which the validation stage maximises
