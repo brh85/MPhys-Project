@@ -4,7 +4,6 @@ Created on Thu Oct 14 12:47:40 2021
 
 @author: Rory Harris
 """
-
 import os
 from tqdm import tqdm
 import numpy as np
@@ -52,12 +51,7 @@ def delete_null(automatic, corrected):
         temp_corr = resize_to_1D(corrected[i])
         if (sum(temp_auto) + sum(temp_corr) != 0): 
             automatic_reduced.append(automatic[i])
-            corrected_reduced.append(corrected[i])
-
-    #automatic_reduced.append(temp_a)
-    #corrected_reduced.append(temp_c)
-    print(len(automatic_reduced), len(corrected_reduced))
-           
+            corrected_reduced.append(corrected[i])           
     return automatic_reduced, corrected_reduced
 
 ###---
@@ -81,10 +75,6 @@ for i in range(0,len(name)):
         data_filepaths.append(cwd+filepath_old_week12+'\\scan'+str(scan)+'\\'+name[i][0])    
         save_filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+name[i][1]+merged+reduced+'\\')
         save_filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+name[i][1]+merged+reduced+'\\')    
-    #data_filepaths is a list off all .mha files to access
-    #save_filepaths is a list of folders to save the numpy array files to
-#print(data_filepaths)
-#print(save_filepaths)
 
 # Check folders exist and create them if not
 for path in save_filepaths:
@@ -111,10 +101,7 @@ if ans_reduced == 'y':
         temp_corr.append(corr_red)
     data = temp_auto
     for i in range(0, len(temp_corr)):
-        data.append(temp_corr[i])
-    #data.append(temp_corr)
-    print(len(data))
-    
+        data.append(temp_corr[i]) 
         
 if ans_merge == 'y':     
     data = merge_classes(data)
