@@ -196,7 +196,9 @@ def get_Dice_Score(val,training_data,im_data,cor_im_data,dice_score_save_loc,dat
     return Dice_Scores, dice_score_values, dice_plot
 
 ###---------GET LOCATION OF DATA--------------###
-def get_image_data(Type, filename, ans_augmented):
+def get_image_data(Type, filename, ans_augmented, ans_feat_vec):
+    if ans_feat_vec == 'y' and filename == 'auto_feat':
+        Type = Type + '_wMRI'
     filepath_baseline = "\Data\Baseline scans"
     filepath_week12 = "\Data\Week 12 scans"
     filepaths = []
@@ -399,11 +401,12 @@ def train_classifier(classifier_type,Train_new, Dice_new_Train, Train_dice_score
     
 def main():
     ans_augmented = input("Use augmented data (y/n) -> ")   
+    ans_feat_vec = input("Use MRI feature vector (y/n) ->")
     
     print("Retrieving data...")
-    image_data = get_image_data(data_type, 'auto',ans_augmented)
-    Corrected_image_data = get_image_data(data_type, 'corrected',ans_augmented)
-    patient_data = get_image_data(data_type, 'auto_feat',ans_augmented)    
+    image_data = get_image_data(data_type, 'auto',ans_augmented, ans_feat_vec)
+    Corrected_image_data = get_image_data(data_type, 'corrected',ans_augmented, ans_feat_vec)
+    patient_data = get_image_data(data_type, 'auto_feat',ans_augmented, ans_feat_vec)    
     
     ans = input("Re-calculate dice scores (y/n) -> ")
     if ans =="y":
@@ -573,8 +576,6 @@ data_types = ['_reduced'] #['', '_merged', '_reduced' ,'_merged_reduced']
 for classifier_type in classifier_types:
     for data_type in data_types:
         
-        
-        
         #-----     VARIABLES LIKELY TO BE CHANGED      -----#
         SVM = 1 #1 if SVM used, 0 if regression
         merged = 0 #1 if classes 1 and 2 are merged, 0 if not
@@ -590,8 +591,6 @@ for classifier_type in classifier_types:
         #metrics_for_validation = ['mean_squared_error']
         #metrics = ['mean_squared_error']
         #-----                                          -----#
-        
-        
         
         
         scans_to_look_at = [1,3,6,7,10,12,13,19]    #numbers of patient data to use        
