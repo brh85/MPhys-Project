@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Tue Mar 22 16:44:25 2022
+
+@author: rory_
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Mar 10 15:23:34 2022
 
 @author: jwluc
@@ -196,15 +203,17 @@ def get_Dice_Score(val,training_data,im_data,cor_im_data,dice_score_save_loc,dat
     return Dice_Scores, dice_score_values, dice_plot
 
 ###---------GET LOCATION OF DATA--------------###
-def get_image_data(Type, filename, ans_augmented, ans_feat_vec):
-    if ans_feat_vec == 'y' and filename == 'auto_feat':
+def get_image_data(Type, data_folder, ans_augmented, ans_feat_vec):
+    filename = 'init.npy'
+    if ans_feat_vec == 'y' and data_folder == 'auto_feat':
         Type = Type + '_wMRI'
+        filename = 'br12con18.npy'
     filepath_baseline = "\Data\Baseline scans"
     filepath_week12 = "\Data\Week 12 scans"
     filepaths = []
     for scan in scans_to_look_at:    
-        filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+filename+Type+'\\')
-        filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+filename+Type+'\\')    
+        filepaths.append(cwd+filepath_baseline+'\\scan'+str(scan)+'\\'+data_folder+Type+'\\')
+        filepaths.append(cwd+filepath_week12+'\\scan'+str(scan)+'\\'+data_folder+Type+'\\')    
     data = []
     for i in tqdm(range(0, len(filepaths))): # should be 16 iterations
         if ans_augmented == 'y':
@@ -215,7 +224,7 @@ def get_image_data(Type, filename, ans_augmented, ans_feat_vec):
             data.append(temp_data)
         else:
             temp_data = []
-            temp_data.append(np.load(filepaths[i]+'\\init.npy').astype(np.float16))
+            temp_data.append(np.load(filepaths[i]+'\\'+filename).astype(np.float16))
             data.append(temp_data)
     #print(len(data),len(data[0]),len(data[0][0]),len(data[0][0][0]))
     # Data should now be a 16x6xzx512x512 array
@@ -400,7 +409,7 @@ def train_classifier(classifier_type,Train_new, Dice_new_Train, Train_dice_score
     return scores,c_vals,c_best,g_vals,g_best,a_vals,a_best
     
 def main():
-    ans_augmented = input("Use augmented data (y/n) -> ")   
+    ans_augmented = input("Use augmented (flipped/rotated) data (y/n) -> ")   
     ans_feat_vec = input("Use MRI feature vector (y/n) ->")
     
     print("Retrieving data...")
