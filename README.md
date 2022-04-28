@@ -14,3 +14,6 @@ The code to extract feature vectors is updated to handle the new format of the n
 
 8-3-22
 Uploaded the code which can now augment the data. Initially this is just rotation (90, 180, 270) and flipping (horizontal and vertical), but there is room for more to be added
+
+28-4-22
+Updated the 'Classification and Regression.py' file so it now has the ability to calculate the continuous DSC. Running this gives a very good AUC (around 0.97) so not sure if this is legit so may be worth looking at.
