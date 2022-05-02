@@ -17,3 +17,7 @@ Uploaded the code which can now augment the data. Initially this is just rotatio
 
 28-4-22
 Updated the 'Classification and Regression.py' file so it now has the ability to calculate the continuous DSC. Running this gives a very good AUC (around 0.97) so not sure if this is legit so may be worth looking at.
+
+2-5-22
+Added 'collate probablility data into correct folder' which converts the prob data from steve into the method we are storing the rest of the data.
+Added 'feature vectors using probablilty data' which calculates the feat. vector for the prob data in R and G and the MRI data in B. Can then be used in main code under name 'prob_feat'
